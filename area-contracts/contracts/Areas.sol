@@ -51,6 +51,9 @@ contract Areas {
   function query(uint8[] memory geohash) public view returns(uint8 areaId) {
     Node storage node = nodes[geohash[0]];
     for (uint256 i = 1; i < geohash.length; i++) {
+      if (node.areaId > 0) {
+        return node.areaId;
+      }
       node = node.children[geohash[i]];
     }
     return node.areaId;

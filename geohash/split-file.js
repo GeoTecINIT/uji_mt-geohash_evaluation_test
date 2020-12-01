@@ -5,11 +5,16 @@
 const fs = require('fs');
 const { stdout } = require('process');
 
-const path = './data/provincias.geojson';
-const destination = './data/provincias';
+// const path = './data/comunidades-autonomas.geojson';
+// const destination = './data/comunidades-autónomas';
+// const path = './data/provincias.geojson';
+// const destination = './data/provincias';
+const path = './data.json';
+const destination = './data/test';
 
 // const getName = properties => `${properties.codigo} (${properties.comunidade_autonoma})`;
-const getName = properties => `${properties.codigo} - ${properties.provincia} (${properties.ccaa})`;
+// const getName = properties => `${properties.codigo} - ${properties.provincia} (${properties.ccaa})`;
+const getName = properties => `${properties.id} - ${properties.name}`;
 
 if (!fs.existsSync(destination)) {
   fs.mkdirSync(destination);
