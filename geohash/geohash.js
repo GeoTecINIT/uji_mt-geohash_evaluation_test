@@ -5,6 +5,7 @@ const { stdout } = require('process');
 const polygonToGeohash = require('geohash-poly');
 const compressHash = require('geohash-compressor1');
 const { geohashesToFeatureCollection } = require('geohash-to-geojson');
+const makeGeohashTree = require('./make-tree');
 
 // const dataDir = './data/comunidades-autónomas';
 // const destDir = './out/comunidades-autónomas';
@@ -51,8 +52,9 @@ const getFileSizeInKb = path => {
   mkdir(destDir);
   fs.writeFileSync(statsPath,
     'PRECISION,CODIGO,NAME,FILESIZE_KB_GEOJSON,FILESIZE_KB_UGEOHASH,FILESIZE_KB_CGEOHASH,'
-      + 'LENGTH_UGEOHASH,LENGTH_CGEOHASH,COMPRESSION_PERCENTAGE,'
-      + 'TIME_SEC_HASH,TIME_SEC_COMPRESS\n');
+      + 'FILESIZE_KB_GEOHASHTREE,FILESIZE_KB_SGEOHASHTREE,'
+      + 'LENGTH_UGEOHASH,LENGTH_CGEOHASH,'
+      + 'TIME_SEC_HASH,TIME_SEC_COMPRESS,TIME_GEOHASHTREE\n');
   for (let precision = minPrecision; precision <= maxPrecision; precision++) {
     console.log(`# PRECISION = ${precision} #`);
     const precisionDir = `${destDir}/precision-${precision}`;
@@ -72,15 +74,21 @@ const getFileSizeInKb = path => {
       stdout.write('    > Convert to geohash...');
       let timer = new Date();
       const hashes = await convertToGeoHash(featureCollection.features[0].geometry, precision);
-      let hashTime = ((new Date()).getTime() - timer.getTime()) / 1000;
+      const hashTime = ((new Date()).getTime() - timer.getTime()) / 1000;
       console.log(`OK (${hashes.length} hashes in ${hashTime} secs)`);
 
       stdout.write('    > Compressing geohashes...');
       timer = new Date();
       const compressedHashes = compressHash(hashes);
-      let compressTime = ((new Date()).getTime() - timer.getTime()) / 1000;
-      let percentage = 100 - (compressedHashes.length / hashes.length * 100);
+      const compressTime = ((new Date()).getTime() - timer.getTime()) / 1000;
+      const percentage = 100 - (compressedHashes.length / hashes.length * 100);
       console.log(`OK (${hashes.length} to ${compressedHashes.length} hashes (${percentage}%) in ${compressTime} secs)`);
+
+      stdout.write('    > Make geohash tree...');
+      timer = new Date();
+      const tree = makeGeohashTree(compressedHashes);
+      const treeTime = ((new Date()).getTime() - timer.getTime()) / 1000;
+      console.log(`OK (in ${treeTime} secs)`)
 
       console.log('    > Writing output...');
       let subDir = `${precisionDir}/${getDirName(properties)}`;
@@ -96,14 +104,18 @@ const getFileSizeInKb = path => {
       fs.writeFileSync(cgeohashesPath, JSON.stringify(compressedHashes));
       console.log('      > Compressed geohases geojson...');
       fs.writeFileSync(`${subDir}/geohashes-compressed.geojson`, JSON.stringify(geohashesToFeatureCollection(compressedHashes)));
+      console.log('      > Geohash tree...');
+      const treePath = `${subDir}/geohashes-tree.json`;
+      const treeJson = JSON.stringify(tree);
+      fs.writeFileSync(treePath, JSON.stringify(tree));
+      console.log('      > Stripped geohash tree...');
+      const strippedTreePath = `${subDir}/geohashes-stree.js`;
+      fs.writeFileSync(strippedTreePath, `module.exports=${treeJson.replace(/"/g, '')};`);
       console.log('    > OK');
 
-      // PRECISION,CODIGO,FILESIZE_KB_GEOJSON,FILESIZE_KB_UGEOHASH,FILESIZE_KB_CGEOHASH,
-      // LENGTH_UGEOHASH,LENGTH_CGEOHASH,COMPRESSION_PERCENTAGE,
-      // TIME_SEC_HASH,TIME_SEC_COMPRESS
       fs.appendFileSync(statsPath, `${precision},${properties.codigo},"${getName(properties)}",`
-        + `${getFileSizeInKb(geojsonPath)},${getFileSizeInKb(ugeohashesPath)},${getFileSizeInKb(cgeohashesPath)},`
-        + `${hashes.length},${compressedHashes.length},${percentage},${hashTime},${compressTime}\n`);
+        + `${getFileSizeInKb(geojsonPath)},${getFileSizeInKb(ugeohashesPath)},${getFileSizeInKb(cgeohashesPath)},${getFileSizeInKb(treePath)},${getFileSizeInKb(strippedTreePath)},`
+        + `${hashes.length},${compressedHashes.length},${hashTime},${compressTime},${treeTime}\n`);
     }
   }
 })();
