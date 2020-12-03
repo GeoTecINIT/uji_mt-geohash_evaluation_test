@@ -3,28 +3,29 @@
 const fs = require('fs');
 const { stdout } = require('process');
 const polygonToGeohash = require('geohash-poly');
-const compressHash = require('geohash-compressor1');
+const compressHash = require('geohash-compression');
 const { geohashesToFeatureCollection } = require('geohash-to-geojson');
-const makeGeohashTree = require('./make-tree');
+const geohashTree = require('geohash-tree');
+const wkx = require('wkx');
 
-// const dataDir = './data/comunidades-autónomas';
-// const destDir = './out/comunidades-autónomas';
-// const minPrecision = 4;
-// const maxPrecision = 7;
-const dataDir = './data/provincias';
-const destDir = './out/provincias';
+const dataDir = './data/comunidades-autónomas';
+const destDir = './out/comunidades-autónomas';
 const minPrecision = 4;
-const maxPrecision = 8;
+const maxPrecision = 7;
+// const dataDir = './data/provincias';
+// const destDir = './out/provincias';
+// const minPrecision = 4;
+// const maxPrecision = 8;
 
-// const getName = properties => properties.comunidade_autonoma;
-const getName = properties => `${properties.provincia} (${properties.ccaa})`;
+const getName = properties => properties.comunidade_autonoma;
+// const getName = properties => `${properties.provincia} (${properties.ccaa})`;
 
-// const getDirName = properties =>
-//   `${properties.codigo}-`
-//   + `${properties.comunidade_autonoma.split(' ').map(x => x[0].toUpperCase() + x.slice(1)).join('')}`;
 const getDirName = properties =>
   `${properties.codigo}-`
-  + `${properties.provincia.split(' ').map(x => x[0].toUpperCase() + x.slice(1)).join('')}`;
+  + `${properties.comunidade_autonoma.split(' ').map(x => x[0].toUpperCase() + x.slice(1)).join('')}`;
+// const getDirName = properties =>
+//   `${properties.codigo}-`
+//   + `${properties.provincia.split(' ').map(x => x[0].toUpperCase() + x.slice(1)).join('')}`;
 
 const mkdir = dir => {
   if (!fs.existsSync(dir)) {
@@ -51,8 +52,8 @@ const getFileSizeInKb = path => {
   const statsPath = `${destDir}/stats.csv`;
   mkdir(destDir);
   fs.writeFileSync(statsPath,
-    'PRECISION,CODIGO,NAME,FILESIZE_KB_GEOJSON,FILESIZE_KB_UGEOHASH,FILESIZE_KB_CGEOHASH,'
-      + 'FILESIZE_KB_GEOHASHTREE,FILESIZE_KB_SGEOHASHTREE,'
+    'PRECISION,CODIGO,NAME,FILESIZE_KB_GEOJSON,FILESIZE_KB_WKB,'
+      + 'FILESIZE_KB_UGEOHASH,FILESIZE_KB_CGEOHASH,FILESIZE_KB_GEOHASHTREE,'
       + 'LENGTH_UGEOHASH,LENGTH_CGEOHASH,'
       + 'TIME_SEC_HASH,TIME_SEC_COMPRESS,TIME_GEOHASHTREE\n');
   for (let precision = minPrecision; precision <= maxPrecision; precision++) {
@@ -71,50 +72,56 @@ const getFileSizeInKb = path => {
         continue;
       }
 
+      stdout.write('    > Make WKB...');
+      const wkbSizeKb = wkx.Geometry.parseGeoJSON(featureCollection.features[0].geometry).toWkb().byteLength / 1024;
+      console.log(`OK (size: ${wkbSizeKb.toFixed(2)} KBs)`);
+
       stdout.write('    > Convert to geohash...');
       let timer = new Date();
       const hashes = await convertToGeoHash(featureCollection.features[0].geometry, precision);
       const hashTime = ((new Date()).getTime() - timer.getTime()) / 1000;
-      console.log(`OK (${hashes.length} hashes in ${hashTime} secs)`);
+      console.log(`OK (${hashes.length} hashes in ${hashTime.toFixed(2)} secs)`);
 
       stdout.write('    > Compressing geohashes...');
       timer = new Date();
       const compressedHashes = compressHash(hashes);
       const compressTime = ((new Date()).getTime() - timer.getTime()) / 1000;
       const percentage = 100 - (compressedHashes.length / hashes.length * 100);
-      console.log(`OK (${hashes.length} to ${compressedHashes.length} hashes (${percentage}%) in ${compressTime} secs)`);
+      console.log(`OK (${hashes.length} to ${compressedHashes.length} hashes (${percentage.toFixed(2)}%) in ${compressTime.toFixed(2)} secs)`);
 
       stdout.write('    > Make geohash tree...');
       timer = new Date();
-      const tree = makeGeohashTree(compressedHashes);
+      const encodedTree = geohashTree.encode(compressedHashes);
       const treeTime = ((new Date()).getTime() - timer.getTime()) / 1000;
-      console.log(`OK (in ${treeTime} secs)`)
+      console.log(`OK (in ${treeTime.toFixed(2)} secs)`);
 
       console.log('    > Writing output...');
       let subDir = `${precisionDir}/${getDirName(properties)}`;
       mkdir(subDir);
-      console.log('      > Original geojson...');
+      stdout.write('      > Original geojson...');
       const geojsonPath = `${subDir}/original.geojson`;
       fs.writeFileSync(geojsonPath, JSON.stringify(featureCollection));
-      console.log('      > Uncompressed geohases json...');
+      console.log(`OK (${getFileSizeInKb(geojsonPath).toFixed(2)} KBs)`)
+      stdout.write('      > Uncompressed geohases json...');
       const ugeohashesPath = `${subDir}/geohashes.json`;
       fs.writeFileSync(ugeohashesPath, JSON.stringify(hashes));
-      console.log('      > Compressed geohases json...');
+      console.log(`OK (${getFileSizeInKb(ugeohashesPath).toFixed(2)} KBs)`)
+      stdout.write('      > Compressed geohases json...');
       const cgeohashesPath = `${subDir}/geohashes-compressed.json`;
       fs.writeFileSync(cgeohashesPath, JSON.stringify(compressedHashes));
-      console.log('      > Compressed geohases geojson...');
+      console.log(`OK (${getFileSizeInKb(cgeohashesPath).toFixed(2)} KBs)`)
+      stdout.write('      > Compressed geohases geojson...');
       fs.writeFileSync(`${subDir}/geohashes-compressed.geojson`, JSON.stringify(geohashesToFeatureCollection(compressedHashes)));
-      console.log('      > Geohash tree...');
-      const treePath = `${subDir}/geohashes-tree.json`;
-      const treeJson = JSON.stringify(tree);
-      fs.writeFileSync(treePath, JSON.stringify(tree));
-      console.log('      > Stripped geohash tree...');
-      const strippedTreePath = `${subDir}/geohashes-stree.js`;
-      fs.writeFileSync(strippedTreePath, `module.exports=${treeJson.replace(/"/g, '')};`);
+      console.log('OK');
+      stdout.write('      > Encoded geohash tree...');
+      const treePath = `${subDir}/geohashes-tree.txt`;
+      fs.writeFileSync(treePath, encodedTree);
+      console.log(`OK (${getFileSizeInKb(treePath).toFixed(2)} KBs)`)
       console.log('    > OK');
 
       fs.appendFileSync(statsPath, `${precision},${properties.codigo},"${getName(properties)}",`
-        + `${getFileSizeInKb(geojsonPath)},${getFileSizeInKb(ugeohashesPath)},${getFileSizeInKb(cgeohashesPath)},${getFileSizeInKb(treePath)},${getFileSizeInKb(strippedTreePath)},`
+        + `${getFileSizeInKb(geojsonPath)},${wkbSizeKb},`
+        + `${getFileSizeInKb(ugeohashesPath)},${getFileSizeInKb(cgeohashesPath)},${getFileSizeInKb(treePath)},`
         + `${hashes.length},${compressedHashes.length},${hashTime},${compressTime},${treeTime}\n`);
     }
   }

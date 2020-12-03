@@ -4,7 +4,7 @@
 const fs = require('fs');
 const { stdout, features } = require('process');
 const geohashPoly = require('geohash-poly');
-const compressHash = require('geohash-compressor1');
+const compressHash = require('geohash-compression');
 
 const precision = 7;
 // const data = './data/comunidades-autonomas.geojson';

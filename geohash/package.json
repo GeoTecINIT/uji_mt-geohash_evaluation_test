@@ -1,0 +1,19 @@
+{
+  "name": "geohash-test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "dependencies": {
+    "geohash-compression": "^1.0.0",
+    "geohash-poly": "^0.6.0",
+    "geohash-to-geojson": "^2.0.2",
+    "geohash-tree": "^1.0.1",
+    "wkx": "^0.5.0"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC"
+}
