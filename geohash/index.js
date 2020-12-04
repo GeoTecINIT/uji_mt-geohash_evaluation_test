@@ -50,7 +50,7 @@ const polygonToGeohash = geometry => new Promise((resolve, reject) => {
     //     )
     //   )
     // };
-    // fs.writeFileSync(`${destination}/${feature.properties.codigo}.json`, JSON.stringify(data));
+    // fs.writeFileSync(`${destination}/ca${feature.properties.codigo}.json`, JSON.stringify(data));
     console.log('OK');
   }
   console.log('FINISH');

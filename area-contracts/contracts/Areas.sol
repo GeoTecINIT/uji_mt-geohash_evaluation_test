@@ -9,14 +9,11 @@ contract Areas {
     uint8[] data;
   }
 
-  mapping(uint256 => uint8) private NODES;
+  mapping(uint64 => uint8) private NODES;
   mapping(uint8 => Area) private AREAS;
 
-  uint8 constant OPEN_MARK = 91;
-  uint8 constant CLOSE_MARK = 93;
-
-  function getShiftAmount(uint level) private pure returns (uint amount) {
-    return 256 - (8 * (level + 1));
+  function getShiftAmount(uint8 level) private pure returns (uint8 amount) {
+    return 64 - (8 * (level)); // 64 = uint64 (bit amounts of NODES indices); base 1
   }
 
   function add(uint8 id, uint8[] memory name, uint8[] memory data) public {
@@ -27,40 +24,29 @@ contract Areas {
     area.data = data;
 
     if (data.length == 1) {
-      NODES[uint256(data[0]) << getShiftAmount(0)] = id;
+      NODES[uint64(data[0]) << getShiftAmount(0)] = id;
       return;
     }
 
-    uint256 nodesIndex = 0;
-    uint level = 0;
+    uint64 index = 0;
+    uint8 level = 1;
 
-    uint i = 0;
-    while (i < data.length) {
-      if (i + 1 >= data.length) {
-        break;
-      }
-      uint8 currentChar = data[i];
-      uint8 nextChar = data[i + 1];
-
-      uint256 shiftAmount = getShiftAmount(level);
-
-      nodesIndex &= ~(uint256(0xFF) << shiftAmount); // clear bits at current level
-      nodesIndex |= (uint256(currentChar) << shiftAmount);
-
-      if (nextChar == OPEN_MARK) {
-        if (NODES[nodesIndex] != 0) {
-          NODES[nodesIndex] = 0;
-        }
-        level++; i += 2; continue;
-      }
-      
-      NODES[nodesIndex] = id;
-
-      if (nextChar == CLOSE_MARK) {
-        level--; i += 2; continue;
+    for (uint i = 0; i < data.length; i++) {
+      if (data[i] == 93) { // close mark ']'
+        level--; continue;
       }
 
-      i++;
+      uint64 shiftAmount = getShiftAmount(level);
+
+      index = (index & ~(uint64(0xFF) << shiftAmount)) | (uint64(data[i]) << shiftAmount);
+        // & ~(uint64(0xFF) << shiftAmount) => clear bits at current level
+        // | (uint64(data[i]) << shiftAmount) => assign current level
+
+      if (data[i + 1] == 91) { // open mark '['
+        level++; i++;
+      } else {
+        NODES[index] = id;
+      }
     }
   }
 
@@ -75,13 +61,16 @@ contract Areas {
   }
 
   function query(uint8[] memory geohash) public view returns(uint8 areaId) {
-    uint index = 0;
-    for (uint i = 0; i < geohash.length; i++) {
-      index |= (uint256(geohash[i]) << getShiftAmount(i));
-      if (NODES[index] > 0) {
-        return NODES[index];
+    uint64 index = 0;
+    uint8 lastId = 0;
+    uint8 length = geohash.length > 8 ? 8 : uint8(geohash.length);
+    for (uint8 i = 0; i < length; i++) {
+      index |= (uint64(geohash[i]) << getShiftAmount(i + 1));
+      if (NODES[index] == 0 && lastId > 0) {
+        return lastId;
       }
+      lastId = NODES[index];
     }
-    return 0;
+    return lastId;
   }
 }
