@@ -91,9 +91,11 @@ const getFileSizeInKb = path => {
 
       stdout.write('    > Make geohash tree...');
       timer = new Date();
-      const encodedTree = geohashTree.encode(compressedHashes);
+      const encodedTreeBinary = geohashTree.encodeBinary(compressedHashes, 'buffer');
       const treeTime = ((new Date()).getTime() - timer.getTime()) / 1000;
-      console.log(`OK (in ${treeTime.toFixed(2)} secs)`);
+      const encodedTree = geohashTree.encode(compressedHashes, 'buffer');
+      console.log(`OK (in ${treeTime.toFixed(2)} secs `
+        + `with normal and binary difference of ${Math.abs(encodedTree.byteLength - encodedTreeBinary.byteLength)} bytes)`);
 
       console.log('    > Writing output...');
       let subDir = `${precisionDir}/${getDirName(properties)}`;
@@ -115,7 +117,7 @@ const getFileSizeInKb = path => {
       console.log('OK');
       stdout.write('      > Encoded geohash tree...');
       const treePath = `${subDir}/geohashes-tree.txt`;
-      fs.writeFileSync(treePath, encodedTree);
+      fs.writeFileSync(treePath, encodedTreeBinary);
       console.log(`OK (${getFileSizeInKb(treePath).toFixed(2)} KBs)`)
       console.log('    > OK');
 
