@@ -1,5 +1,4 @@
 // send all data for contracts
-// format {id: number, name: string, hashes: byte[]}[]
 
 const fs = require('fs');
 const { stdout, features } = require('process');
@@ -8,7 +7,6 @@ const compressHash = require('geohash-compression');
 const geohashTree = require('geohash-tree');
 
 const precision = 6;
-// const data = './data/comunidades-autonomas.geojson';
 const data = './data.json';
 const destination = '../area-contracts/areas'
 
@@ -30,27 +28,17 @@ const polygonToGeohash = geometry => new Promise((resolve, reject) => {
   for (let i = 0; i < geojson.features.length; i++) {
     const feature = geojson.features[i];
     stdout.write(`${feature.properties.id} - ${feature.properties.name}...`);
-    const data = {
+    const metadata = {
       id: feature.properties.id,
-      name: feature.properties.name,
-      data: geohashTree.encode(
-        compressHash(
-          await polygonToGeohash(feature.geometry)
-        )
-      )
+      name: feature.properties.name
     };
-    fs.writeFileSync(`${destination}/${feature.properties.id}.json`, JSON.stringify(data));
-    // stdout.write(`${feature.properties.codigo} - ${feature.properties.comunidade_autonoma}...`);
-    // const data = {
-    //   id: feature.properties.codigo,
-    //   name: feature.properties.comunidade_autonoma,
-    //   data: geohashTree.encode(
-    //     compressHash(
-    //       await polygonToGeohash(feature.geometry)
-    //     )
-    //   )
-    // };
-    // fs.writeFileSync(`${destination}/ca${feature.properties.codigo}.json`, JSON.stringify(data));
+    const data = geohashTree.encodeBinary(
+      compressHash(
+        await polygonToGeohash(feature.geometry)
+      )
+    , 'buffer');
+    fs.writeFileSync(`${destination}/${feature.properties.id}.json`, JSON.stringify(metadata));
+    fs.writeFileSync(`${destination}/${feature.properties.id}.geohashtree`, data);
     console.log('OK');
   }
   console.log('FINISH');

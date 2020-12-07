@@ -24,7 +24,7 @@ contract Areas {
     area.data = data;
 
     if (data.length == 1) {
-      NODES[uint64(data[0]) << getShiftAmount(0)] = id;
+      NODES[uint64(data[0]) << getShiftAmount(1)] = id;
       return;
     }
 
@@ -32,19 +32,20 @@ contract Areas {
     uint8 level = 1;
 
     for (uint i = 0; i < data.length; i++) {
-      if (data[i] == 93) { // close mark ']'
+      if (data[i] == 0x40) { // close mark = 010 00000
         level--; continue;
       }
 
       uint64 shiftAmount = getShiftAmount(level);
 
-      index = (index & ~(uint64(0xFF) << shiftAmount)) | (uint64(data[i]) << shiftAmount);
+      index = (index & ~(uint64(0xFF) << shiftAmount)) | (uint64(data[i] & 0x1F) << shiftAmount);
         // & ~(uint64(0xFF) << shiftAmount) => clear bits at current level
-        // | (uint64(data[i]) << shiftAmount) => assign current level
+        // | (uint64(data[i] & 01F) << shiftAmount) => assign current level
+        // 0x1F => char mark = 000 11111
 
-      if (data[i + 1] == 91) { // open mark '['
-        level++; i++;
-      } else {
+      if (data[i] & 0x20 == 0x20) { // open mark = 001 00000
+        level++;
+      } else if (level < 9) {
         NODES[index] = id;
       }
     }
