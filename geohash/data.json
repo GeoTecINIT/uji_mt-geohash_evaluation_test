@@ -3,7 +3,7 @@
   "features": [
     {
       "type": "Feature",
-      "properties": {"id": 1, "name": "A"},
+      "properties": {"id": 1, "name": "Area A"},
       "geometry": {
         "type": "Polygon",
         "coordinates": [
@@ -38,7 +38,7 @@
     },
     {
       "type": "Feature",
-      "properties": {"id": 2, "name": "B"},
+      "properties": {"id": 2, "name": "Area B"},
       "geometry": {
         "type": "Polygon",
         "coordinates": [
@@ -77,7 +77,7 @@
     },
     {
       "type": "Feature",
-      "properties": {"id": 3, "name": "C"},
+      "properties": {"id": 3, "name": "Area C"},
       "geometry": {
         "type": "Polygon",
         "coordinates": [

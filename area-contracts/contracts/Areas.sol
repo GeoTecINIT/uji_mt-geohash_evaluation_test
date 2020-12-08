@@ -6,7 +6,8 @@ contract Areas {
     uint8 id;
     address addedBy;
     uint8[] name;
-    uint8[] data;
+    mapping(uint => uint8[]) data;
+    uint dataLength;
   }
 
   mapping(uint64 => uint8) private NODES;
@@ -21,7 +22,6 @@ contract Areas {
     area.id = id;
     area.name = name;
     area.addedBy = msg.sender;
-    area.data = data;
 
     if (data.length == 1) {
       NODES[uint64(data[0]) << getShiftAmount(1)] = id;
@@ -49,6 +49,9 @@ contract Areas {
         NODES[index] = id;
       }
     }
+
+    area.data[area.dataLength] = data;
+    area.dataLength++;
   }
 
   function getName(uint8 id) public view returns(uint8[] memory name) {
@@ -61,17 +64,29 @@ contract Areas {
     return area.addedBy;
   }
 
+  function getDataLength(uint8 id) public view returns(uint length) {
+    Area storage area = AREAS[id];
+    return area.dataLength;
+  }
+
+  function getData(uint8 areaId, uint dataIndex) public view returns(uint8[] memory data) {
+    Area storage area = AREAS[areaId];
+    return area.data[dataIndex];
+  }
+
   function query(uint8[] memory geohash) public view returns(uint8 areaId) {
     uint64 index = 0;
-    uint8 lastId = 0;
     uint8 length = geohash.length > 8 ? 8 : uint8(geohash.length);
     for (uint8 i = 0; i < length; i++) {
       index |= (uint64(geohash[i]) << getShiftAmount(i + 1));
-      if (NODES[index] == 0 && lastId > 0) {
-        return lastId;
-      }
-      lastId = NODES[index];
     }
-    return lastId;
+
+    for (uint8 i = length; i > 0; i--) {
+      if (NODES[index] > 0) {
+        return NODES[index];
+      }
+      index &= ~(uint64(0xFF) << getShiftAmount(i));
+    }
+    return NODES[index];
   }
 }

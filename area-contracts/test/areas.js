@@ -5,10 +5,10 @@ const byteArrToStr = bytes => Buffer.from(bytes).toString();
 const strToByteArr = str => Array.from(str).map(s => s.charCodeAt(0));
 
 const BYTE32_NUMBER = {
- 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7,
- 8: 8, 9: 9, b: 10, c: 11, d: 12, e: 13, f: 14, g: 15,
- h: 16, j: 17, k: 18, m: 19, n: 20, p: 21, q: 22, r: 23,
- s: 24, t: 25, u: 26, v: 27, w: 28, x: 29, y: 30, z: 31,
+  0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7,
+  8: 8, 9: 9, b: 10, c: 11, d: 12, e: 13, f: 14, g: 15,
+  h: 16, j: 17, k: 18, m: 19, n: 20, p: 21, q: 22, r: 23,
+  s: 24, t: 25, u: 26, v: 27, w: 28, x: 29, y: 30, z: 31,
 };
 
 const toByte32Number = char => BYTE32_NUMBER[char];
@@ -65,13 +65,14 @@ contract('Areas', async(accounts) => {
       ['sp0589', 3],
       ['sp052em', 3]
     ].map(c => [
-      c[0].split('').map(x => toByte32Number(x)),
+      Array.from(c[0]).map(x => toByte32Number(x)),
       c[1]
     ]);
 
     for (let i = 0; i < checkLists.length; i++) {
-      const result = (await areas.query(checkLists[i][0])).toNumber();
-      expect(result).to.equal(checkLists[i][1]);
+      expect(
+        (await areas.query(checkLists[i][0])).toNumber()
+      ).to.equal(checkLists[i][1]);
     }
   });
 });

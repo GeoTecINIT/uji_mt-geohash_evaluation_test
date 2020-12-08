@@ -1,23 +1,14 @@
 // send all data for contracts
 
 const fs = require('fs');
-const { stdout, features } = require('process');
-const geohashPoly = require('geohash-poly');
+const { stdout } = require('process');
 const compressHash = require('geohash-compression');
+const polygonToGeohash = require('./polygon-to-geohash');;
 const geohashTree = require('geohash-tree');
 
-const precision = 6;
+const precision = 7;
 const data = './data.json';
-const destination = '../area-contracts/areas'
-
-const polygonToGeohash = geometry => new Promise((resolve, reject) => {
-  geohashPoly({coords: geometry.coordinates, precision: precision}, (err, hashes) => {
-    if (err) {
-      reject(err); return;
-    }
-    resolve(hashes);
-  });
-});
+const destination = '../area-contracts/areas';
 
 (async() => {
   if (!fs.existsSync(destination)) {
@@ -34,11 +25,11 @@ const polygonToGeohash = geometry => new Promise((resolve, reject) => {
     };
     const data = geohashTree.encodeBinary(
       compressHash(
-        await polygonToGeohash(feature.geometry)
+        await polygonToGeohash(feature.geometry, precision)
       )
     , 'buffer');
-    fs.writeFileSync(`${destination}/${feature.properties.id}.json`, JSON.stringify(metadata));
-    fs.writeFileSync(`${destination}/${feature.properties.id}.geohashtree`, data);
+    fs.writeFileSync(`${destination}/7${feature.properties.id}.json`, JSON.stringify(metadata));
+    fs.writeFileSync(`${destination}/7${feature.properties.id}.geohashtree`, data);
     console.log('OK');
   }
   console.log('FINISH');

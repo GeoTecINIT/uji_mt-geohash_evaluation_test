@@ -37,7 +37,8 @@ module.exports = {
 
   networks: {
     develop: {
-      gas: 10000000
+      gas: 12500000,
+      gasPrice: 1
     }
     // Useful for testing. The `development` name is special - truffle uses it by default
     // if it's defined here and no other network is specified at the command line.
